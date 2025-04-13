@@ -1,0 +1,43 @@
+name: Build and Push Ansible Runner Image
+
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - base: ubuntu:24.04
+            tag: ubuntu24
+            is_latest: true
+          - base: ubuntu:22.04
+            tag: ubuntu22
+            is_latest: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push Ansible runner image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: BASE_IMAGE=${{ matrix.base }}
+          tags: |
+            adbsoftwaresolutions/ansible-runner:${{ matrix.tag }}
+            ${{ matrix.is_latest && 'adbsoftwaresolutions/ansible-runner:latest' || '' }}
